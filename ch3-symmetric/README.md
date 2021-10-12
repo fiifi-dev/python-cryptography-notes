@@ -133,9 +133,9 @@ Remember, the IV is supposed to be different each time you encrypt, preventing t
 
 Calling the update() method over and over is not reusing a key and IV because we are appending to the end of the CBC chain. Never give the same key and IV pair to an encryptor more than once
 
-## Cross the Streams
+## Cross the Streams 
 
-Counter mode has a number of advantages to CBC mode and, in our opinion, is significantly easier to understand than CBC mode.
+**Counter mode (CTR)** has a number of advantages to CBC mode and, in our opinion, is significantly easier to understand than CBC mode.
 
 **AES-CTR** mimics this aspect of **OTP**. But instead of requiring the key to be the same size as the plaintext (a real pain when encrypting a 1TB file), it uses AES and a counter to generate a key stream of almost arbitrary length from an AES key as small as 128 bits.
 
@@ -147,3 +147,40 @@ $$C[n] = P[n] ^ (IV + n)<sub>k</sub>$$ *For encryption*
 Where IV is the **nounce**: where the subscript k indicates *"encrypted with key k"*):
 
 $$P[n] = C[n] ^ (IV + n)<sub>k</sub>$$ *For decryption*
+
+Implementation of CTR
+
+```python
+from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
+from cryptography.hazmat.backends import default_backend
+import os
+
+# Step 1 generate key and nonce
+key = os.urandom(32)
+nonce = os.urandom(16)
+
+# Step 2 create cipher object
+aes_context = Cipher(algorithms.AES(key),modes.CTR(nonce),backend=default_backend())
+
+#Step for generate encryptor and decryptor
+encryptor = aes_context.encryptor()
+decryptor = aes_context.decryptor()
+
+# Step 5: encrypt
+encryptor.update(plaintext)
+encryptor.finalize()
+
+decryptor.update(ciphertext)
+decryptor.finalize()
+
+```
+
+Because no padding is needed, the finalize methods are actually unnecessary except for “closing” the object. How do you choose between CTR and CBC modes? In almost all circumstances, counter mode (CTR) is recommended.12 Not only is it easier, but in some circumstances it is also more secure. As if that wasn’t enough, counter mode is also easier to parallelize because keys in the key stream are computed from their index, not from a preceding computation.
+
+## Key and IV Management
+
+We have already touched briefly on one of them: reuse of keys or IVs.
+
+**Important** You must never reuse key and IV pairs. Doing so seriously compromises security and disappoints cryptography book authors. Just don’t do it. Always use a new key/IV pair when encrypting anything.
+
+Reusing a key and IV in CBC mode is bad. Reusing a key and IV in counter mode, on the other hand, is much worse. Because  counter mode is a stream cipher, the plaintext is simply XORed with the key stream. If  you happen to know the plaintext, you can recover the key
