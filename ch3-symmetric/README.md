@@ -52,13 +52,13 @@ An IV is typically a random string that is used as a third input—in addition t
 
 In ECB avalanche effect depends on the block length. This implies a change in the first block will affect just the first block. To make make this effect affect the other blocks-When encrypting, for example, one can **XOR** the encrypted output of a block with the unencrypted input of the next block. To reverse this while decrypting, the ciphertext is decrypted and then the XOR operation is again applied to the previous ciphertext block to obtain the plaintext.
 This is called **cipher block chaining (CBC) mode**.
-$$(A XOR B) XOR B = A$$
+![Figure 1](static/figure1.png)
 
 for encryption:
-$$P'[n] = P[n]*C[n-1]$$ where Co=IV
+![Figure 2](static/figure2.png)
 
 for decryption:
-$$P[n] = P'[n]*C[n-1]$$ where Co=IV
+![Figure 3](static/figure3.png)
 
 ### Implementation of CBC
 
@@ -133,7 +133,7 @@ Remember, the IV is supposed to be different each time you encrypt, preventing t
 
 Calling the update() method over and over is not reusing a key and IV because we are appending to the end of the CBC chain. Never give the same key and IV pair to an encryptor more than once
 
-## Cross the Streams 
+## Cross the Streams
 
 **Counter mode (CTR)** has a number of advantages to CBC mode and, in our opinion, is significantly easier to understand than CBC mode.
 
@@ -141,12 +141,12 @@ Calling the update() method over and over is not reusing a key and IV because we
 
 Happily,**stream ciphers** do not require padding! It is quite simple to only XOR a partial block, discarding the later parts of the key that aren’t needed.
 
-$$C[n] = P[n] ^ n<sub>k</sub>$$
-$$C[n] = P[n] ^ (IV + n)<sub>k</sub>$$ *For encryption*
+![Figure 4](static/figure4.png)
+![Figure 5](static/figure5.png) *For encryption*
 
 Where IV is the **nounce**: where the subscript k indicates *"encrypted with key k"*):
 
-$$P[n] = C[n] ^ (IV + n)<sub>k</sub>$$ *For decryption*
+![Figure 6](static/figure6.png)*For decryption*
 
 Implementation of CTR
 
@@ -184,3 +184,29 @@ We have already touched briefly on one of them: reuse of keys or IVs.
 **Important** You must never reuse key and IV pairs. Doing so seriously compromises security and disappoints cryptography book authors. Just don’t do it. Always use a new key/IV pair when encrypting anything.
 
 Reusing a key and IV in CBC mode is bad. Reusing a key and IV in counter mode, on the other hand, is much worse. Because  counter mode is a stream cipher, the plaintext is simply XORed with the key stream. If  you happen to know the plaintext, you can recover the key
+
+**Note** If the keystream is reused, the attacker can decrypt all messages that used it. Even if it is not reused, the attacker can alter a message with known plaintext.
+
+### Gaze into the Padding
+
+CBC was vunerable to *padding oracle attack*, especially if you write your own padding function.
+
+### Weak keys, Bad Management
+
+Random package is not secure eg:
+
+```python
+import random
+key = random.getrandbits(16, "big")
+```
+
+Instead use `Instead, always pull from os.urandom()` for generating random numbers
+In short, don’t bother using a good cipher with a bad key. Make sure that your keys are securely generated and adequately resistant to abuse by a determined adversary.
+
+Other symmetric ciphers:
+
+1. Camellia
+2. ChaCha20
+3. TripleDES
+4. CAST5
+5. SEED
